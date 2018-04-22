@@ -8,4 +8,6 @@ Rails.application.routes.draw do
   get '/kamigo/response_body', to: 'kamigo#show_response_body'
   post '/kamigo/webhook', to: 'kamigo#webhook'
   get '/kamigo/sent_request', to: 'kamigo#sent_request'
+
+  resources :push_messages, only: [:new, :create]
 end
