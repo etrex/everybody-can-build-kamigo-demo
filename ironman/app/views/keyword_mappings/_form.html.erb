@@ -1,0 +1,32 @@
+<%= form_with(model: keyword_mapping, local: true) do |form| %>
+  <% if keyword_mapping.errors.any? %>
+    <div id="error_explanation">
+      <h2><%= pluralize(keyword_mapping.errors.count, "error") %> prohibited this keyword_mapping from being saved:</h2>
+
+      <ul>
+      <% keyword_mapping.errors.full_messages.each do |message| %>
+        <li><%= message %></li>
+      <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="field">
+    <%= form.label :channel_id %>
+    <%= form.text_field :channel_id, id: :keyword_mapping_channel_id %>
+  </div>
+
+  <div class="field">
+    <%= form.label :keyword %>
+    <%= form.text_field :keyword, id: :keyword_mapping_keyword %>
+  </div>
+
+  <div class="field">
+    <%= form.label :message %>
+    <%= form.text_field :message, id: :keyword_mapping_message %>
+  </div>
+
+  <div class="actions">
+    <%= form.submit %>
+  </div>
+<% end %>

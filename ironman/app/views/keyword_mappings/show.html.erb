@@ -1,0 +1,19 @@
+<p id="notice"><%= notice %></p>
+
+<p>
+  <strong>Channel:</strong>
+  <%= @keyword_mapping.channel_id %>
+</p>
+
+<p>
+  <strong>Keyword:</strong>
+  <%= @keyword_mapping.keyword %>
+</p>
+
+<p>
+  <strong>Message:</strong>
+  <%= @keyword_mapping.message %>
+</p>
+
+<%= link_to 'Edit', edit_keyword_mapping_path(@keyword_mapping) %> |
+<%= link_to 'Back', keyword_mappings_path %>

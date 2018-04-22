@@ -1,0 +1,31 @@
+<p id="notice"><%= notice %></p>
+
+<h1>Keyword Mappings</h1>
+
+<table>
+  <thead>
+    <tr>
+      <th>Channel</th>
+      <th>Keyword</th>
+      <th>Message</th>
+      <th colspan="3"></th>
+    </tr>
+  </thead>
+
+  <tbody>
+    <% @keyword_mappings.each do |keyword_mapping| %>
+      <tr>
+        <td><%= keyword_mapping.channel_id %></td>
+        <td><%= keyword_mapping.keyword %></td>
+        <td><%= keyword_mapping.message %></td>
+        <td><%= link_to 'Show', keyword_mapping %></td>
+        <td><%= link_to 'Edit', edit_keyword_mapping_path(keyword_mapping) %></td>
+        <td><%= link_to 'Destroy', keyword_mapping, method: :delete, data: { confirm: 'Are you sure?' } %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<br>
+
+<%= link_to 'New Keyword Mapping', new_keyword_mapping_path %>
