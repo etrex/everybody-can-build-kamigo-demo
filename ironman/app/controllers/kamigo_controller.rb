@@ -9,11 +9,48 @@ class KamigoController < ApplicationController
     # 設定回覆文字
     reply_text = keyword_reply(received_text) if reply_text.nil?
 
+    # 推齊
+    reply_text = echo2(channel_id, received_text) if reply_text.nil?
+
+    # 記錄對話
+    save_to_received(channel_id, received_text)
+    save_to_reply(channel_id, reply_text)
+
     # 傳送訊息到line
     response = reply_to_line(reply_text)
 
     # 回應200
     head :ok
+  end
+
+  # 頻道ID
+  def channel_id
+    source = params['events'][0]['source']
+    source['groupId'] ||source['roomId'] ||source['userId']
+  end
+
+  # 儲存對話
+  def save_to_received(channel_id, received_text)
+    return if received_text.nil?
+    Received.create(channel_id: channel_id, text: received_text)
+  end
+
+  # 儲存回應
+  def save_to_reply(channel_id, reply_text)
+    return if reply_text.nil?
+    Reply.create(channel_id: channel_id, text: reply_text)
+  end
+
+  def echo2(channel_id, received_text)
+    # 如果在channel_id最近沒人講過received_text,卡米狗就不回應
+    recent_received_texts = Received.where(channel_id:
+    channel_id).last(5)&.pluck(:text)
+    return nil unless received_text.in? recent_received_texts
+
+    # 如果在channel_id卡米狗上一句回應是received_text,卡米狗就不回應
+    last_reply_text = Reply.where(channel_id: channel_id).last&.text
+    return nil if last_reply_text == received_text
+    received_text
   end
 
   # 取得對方說的話
