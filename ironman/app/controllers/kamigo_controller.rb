@@ -3,13 +3,27 @@ class KamigoController < ApplicationController
   protect_from_forgery with: :null_session
 
   def webhook
+    # 查天氣
+    reply_image = get_weather(received_text)
+
+    # 有查到的話 後面的事情就不作了
+    unless reply_image.nil?
+      # 傳送訊息到 line
+      response = reply_image_to_line(reply_image)
+
+      # 回應 200
+      head :ok
+
+      return
+    end
+
     # 紀錄頻道
     Channel.find_or_create_by(channel_id: channel_id)
 
     # 學說話
     reply_text = learn(channel_id, received_text)
 
-    # 設定回覆文字
+    # 關鍵字回覆
     reply_text = keyword_reply(channel_id, received_text) if reply_text.nil?
 
     # 推齊
@@ -19,17 +33,66 @@ class KamigoController < ApplicationController
     save_to_received(channel_id, received_text)
     save_to_reply(channel_id, reply_text)
 
-    # 傳送訊息到line
+    # 傳送訊息到 line
     response = reply_to_line(reply_text)
 
-    # 回應200
+    # 回應 200
     head :ok
   end
 
-  # 頻道ID
+  def get_weather(received_text)
+    return nil unless received_text.include? '天氣'
+    upload_to_imgur(get_weather_from_cwb)
+  end
+
+  def get_weather_from_cwb
+    uri = URI('http://www.cwb.gov.tw/V7/js/HDRadar_1000_n_val.js')
+    response = Net::HTTP.get(uri)
+    start_index = response.index('","') + 3
+    end_index = response.index('"),') - 1
+    "http://www.cwb.gov.tw" + response[start_index..end_index]
+  end
+
+  def upload_to_imgur(image_url)
+    url = URI("https://api.imgur.com/3/image")
+    http = Net::HTTP.new(url.host, url.port)
+    http.use_ssl = true
+    request = Net::HTTP::Post.new(url)
+    request["authorization"] = 'Client-ID be2d83405627ab7'
+
+    request.set_form_data({"image" => image_url})
+    response = http.request(request)
+    json = JSON.parse(response.read_body)
+    begin
+      json['data']['link'].gsub("http:","https:")
+    rescue
+      nil
+    end
+  end
+
+
+  # 傳送圖片到 line
+  def reply_image_to_line(reply_image)
+    return nil if reply_image.nil?
+
+    # 取得 reply token
+    reply_token = params['events'][0]['replyToken']
+
+    # 設定回覆訊息
+    message = {
+      type: "image",
+      originalContentUrl: reply_image,
+      previewImageUrl: reply_image
+    }
+
+    # 傳送訊息
+    line.reply_message(reply_token, message)
+  end
+
+  # 頻道 ID
   def channel_id
     source = params['events'][0]['source']
-    source['groupId'] ||source['roomId'] ||source['userId']
+    source['groupId'] || source['roomId'] || source['userId']
   end
 
   # 儲存對話
@@ -45,14 +108,14 @@ class KamigoController < ApplicationController
   end
 
   def echo2(channel_id, received_text)
-    # 如果在channel_id最近沒人講過received_text,卡米狗就不回應
-    recent_received_texts = Received.where(channel_id:
-    channel_id).last(5)&.pluck(:text)
+    # 如果在 channel_id 最近沒人講過 received_text，卡米狗就不回應
+    recent_received_texts = Received.where(channel_id: channel_id).last(5)&.pluck(:text)
     return nil unless received_text.in? recent_received_texts
 
-    # 如果在channel_id卡米狗上一句回應是received_text,卡米狗就不回應
+    # 如果在 channel_id 卡米狗上一句回應是 received_text，卡米狗就不回應
     last_reply_text = Reply.where(channel_id: channel_id).last&.text
     return nil if last_reply_text == received_text
+
     received_text
   end
 
@@ -77,7 +140,7 @@ class KamigoController < ApplicationController
     message = received_text[semicolon_index+1..-1]
 
     KeywordMapping.create(channel_id: channel_id, keyword: keyword, message: message)
-    '好哦∼好哦∼'
+    '好哦～好哦～'
   end
 
   # 關鍵字回覆
@@ -87,11 +150,11 @@ class KamigoController < ApplicationController
     KeywordMapping.where(keyword: received_text).last&.message
   end
 
-  # 傳送訊息到line
+  # 傳送訊息到 line
   def reply_to_line(reply_text)
     return nil if reply_text.nil?
 
-    # 取得reply token
+    # 取得 reply token
     reply_token = params['events'][0]['replyToken']
 
     # 設定回覆訊息
@@ -104,11 +167,11 @@ class KamigoController < ApplicationController
     line.reply_message(reply_token, message)
   end
 
-  # Line Bot API物件初始化
+  # Line Bot API 物件初始化
   def line
     @line ||= Line::Bot::Client.new { |config|
       config.channel_secret = '9160ce4f0be51cc72c3c8a14119f567a'
-      config.channel_token = '2ncMtCFECjdTVmopb/QSD1PhqM6ECR4xEqC9uwIzELIsQb+I4wa/s3pZ4BH8hCWeqfkpVGVig/mIPDsMjVcyVbN/WNeTTw5eHEA7hFhaxPmQSY2Cud51LK PPiXY+nUi+QrXy0d7Hi2YUs65B/tVOpgdB04t89/1O/w1cDnyilFU='
+      config.channel_token = '2ncMtCFECjdTVmopb/QSD1PhqM6ECR4xEqC9uwIzELIsQb+I4wa/s3pZ4BH8hCWeqfkpVGVig/mIPDsMjVcyVbN/WNeTTw5eHEA7hFhaxPmQSY2Cud51LKPPiXY+nUi+QrXy0d7Hi2YUs65B/tVOpgdB04t89/1O/w1cDnyilFU='
     }
   end
 
@@ -158,4 +221,5 @@ class KamigoController < ApplicationController
   def translate_to_korean(message)
     "#{message}油~"
   end
+
 end
